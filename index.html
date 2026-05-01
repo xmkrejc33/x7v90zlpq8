@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="robots" content="noindex, nofollow">
+    <title>Hádání Slova - Rychlé Odeslání</title>
+    <style>
+        /* Styl zůstává stejný jako minule */
+        :root { --primary: #2ecc71; --bg: #f4f7f6; --text: #2c3e50; }
+        body { font-family: -apple-system, sans-serif; background: var(--bg); color: var(--text); display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; margin: 0; padding: 20px; box-sizing: border-box; }
+        .card { background: white; padding: 30px; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); width: 100%; max-width: 400px; text-align: center; }
+        h1 { margin-top: 0; font-size: 1.5rem; }
+        #hrac-jmeno { color: var(--primary); font-weight: bold; }
+        .instrukce { font-size: 0.9rem; color: #7f8c8d; margin-bottom: 20px; line-height: 1.4; }
+        button { width: 100%; padding: 18px; font-size: 1.1rem; font-weight: bold; background: var(--primary); color: white; border: none; border-radius: 12px; cursor: pointer; transition: transform 0.1s, background 0.2s; box-shadow: 0 4px 15px rgba(46, 204, 113, 0.3); }
+        button:active { transform: scale(0.98); background: #27ae60; }
+        button:disabled { background: #bdc3c7; box-shadow: none; }
+        #status { margin-top: 20px; font-weight: 500; min-height: 1.2em; }
+        .loader { display: none; margin: 10px auto; border: 4px solid #f3f3f3; border-top: 4px solid var(--primary); border-radius: 50%; width: 24px; height: 24px; animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+
+<div class="card" id="main-content" style="display:none;">
+    <h1>Ahoj, <span id="hrac-jmeno">...</span>!</h1>
+    <p class="instrukce">Zkopíruj výsledek v aplikaci <b>HadejSlova.cz</b> a pak klikni na tlačítko níže.</p>
+    
+    <div class="loader" id="spinner"></div>
+    <button id="btn-odeslat" onclick="odeslatVysledek()">ODESLAT VÝSLEDEK</button>
+    <div id="status"></div>
+</div>
+
+<script>
+    // --- NASTAVENÍ ---
+    const SPRAVNY_PIN = "1234"; 
+    const GOOGLE_SCRIPT_URL = "VASE_URL_Z_GOOGLE_SCRIPTU"; 
+    // -----------------
+
+    const params = new URLSearchParams(window.location.search);
+    const jmenoHrace = params.get('hrac') || "Hráči";
+    const pinZAdresy = params.get('pin');
+
+    window.onload = function() {
+        // Kontrola: Je PIN v adrese správný?
+        if (pinZAdresy === SPRAVNY_PIN) {
+            pustitHraceDovnitr();
+        } else {
+            // Pokud PIN v adrese není nebo je špatně, zeptáme se ručně
+            const zadanyPin = prompt("Vstup chráněn PINem. Zadej kód:");
+            if (zadanyPin === SPRAVNY_PIN) {
+                pustitHraceDovnitr();
+            } else {
+                alert("Špatný kód!");
+                document.body.innerHTML = "<h1>Přístup zamítnut</h1>";
+            }
+        }
+    };
+
+    function pustitHraceDovnitr() {
+        document.getElementById('main-content').style.display = 'block';
+        document.getElementById('hrac-jmeno').innerText = jmenoHrace;
+    }
+
+    async function odeslatVysledek() {
+        const btn = document.getElementById('btn-odeslat');
+        const status = document.getElementById('status');
+        const spinner = document.getElementById('spinner');
+
+        try {
+            const textZeSchranky = await navigator.clipboard.readText();
+            
+            if (!textZeSchranky.includes("HadejSlova.cz")) {
+                status.style.color = "red";
+                status.innerText = "Ve schránce není výsledek!";
+                return;
+            }
+
+            btn.disabled = true;
+            spinner.style.display = "block";
+            status.innerText = "Posílám...";
+
+            const finalUrl = `${GOOGLE_SCRIPT_URL}?hrac=${encodeURIComponent(jmenoHrace)}&text=${encodeURIComponent(textZeSchranky)}`;
+
+            await fetch(finalUrl, { mode: 'no-cors' });
+
+            spinner.style.display = "none";
+            status.style.color = "green";
+            status.innerText = "Výsledek úspěšně uložen!";
+            btn.innerText = "ODESLÁNO";
+            
+        } catch (err) {
+            spinner.style.display = "none";
+            btn.disabled = false;
+            status.style.color = "red";
+            status.innerText = "Chyba schránky. Povol přístup!";
+        }
+    }
+</script>
+
+</body>
+</html>
