@@ -83,11 +83,20 @@
 
             const finalUrl = `${GOOGLE_SCRIPT_URL}?hrac=${encodeURIComponent(jmenoHrace)}&text=${encodeURIComponent(textZeSchranky)}`;
 
-            await fetch(finalUrl, { mode: 'no-cors' });
+    const response = await fetch(finalUrl); // Odstraněno no-cors
+    
+    if (response.ok) {
+        const textOdpovedi = await response.text();
+        // Tady vypíšeme skutečnou odpověď z Google Skriptu
+        status.innerText = textOdpovedi; 
+    } else {
+        status.innerText = "Chyba spojení se serverem.";
+    }
+          
 
             spinner.style.display = "none";
             status.style.color = "green";
-            status.innerText = "Výsledek úspěšně uložen!";
+            //status.innerText = "Výsledek úspěšně uložen!";
             btn.innerText = "ODESLÁNO";
             
         } catch (err) {
